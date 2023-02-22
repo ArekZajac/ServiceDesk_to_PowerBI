@@ -9,13 +9,14 @@ from datetime import datetime
 
 # todo: - Health check per get request.
 #       - Grouped post requests.
+#       - ticket status
 
 def requestTickets(rowCount, startIndex):
     api_url = "https://helpme.brogangroup.com/api/v3/requests"
     input_data = "&input_data=%7B%22list_info%22%3A%7B%22row_count%22%3A+" + str(rowCount) + "%2C%22start_index%22%3A+" + str(startIndex) + "%2C%22get_total_count%22%3A+true%7D%7D"
     return (requests.get(api_url + config.servicedesk_key + "&format=json" + input_data)).json()
 
-def postTicket(id, req, dep, time, tech, subj, desc):
+def postTicket(id, req, dep, time, tech, subj, desc, site, stat):
     api_url = "https://api.powerbi.com/beta/e8f68013-0f30-4098-91cd-6aa91122a893/datasets/4b2d23ee-eadd-4660-992e-0e3152ccb2df/rows?cmpid=pbi-home-body-snn-signin"
     headers = {
         'Content-Type': 'application/json'
@@ -27,7 +28,9 @@ def postTicket(id, req, dep, time, tech, subj, desc):
         "timestamp": time,
         "technician": tech,
         "subject": subj,
-        "description": desc
+        "description": desc,
+        "site": site,
+        "status": stat
     }]
     response = requests.post(api_url + config.powerbi_key,headers=headers, data=json.dumps(payload))
     if response.text != "":
@@ -110,7 +113,13 @@ def main():
         try: tech = d["technician"]["name"]
         except: tech = ""
 
-        postTicket(d["id"], d["requester"]["name"], dep, t, tech, d["subject"], d["short_description"])
+        try: site = d["site"]["name"]
+        except: site = ""
+
+        try: stat = d["status"]["name"]
+        except: stat = ""
+
+        postTicket(d["id"], d["requester"]["name"], dep, t, tech, d["subject"], d["short_description"], site, stat)
 
         # Due to API limitation, pacing per request is introduced @ 2 requests/sec minimum.
         stop = time.time()
